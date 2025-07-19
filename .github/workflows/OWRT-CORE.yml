@@ -122,7 +122,7 @@ jobs:
           cd ./owrt
           
           rm -rf ./tmp* ./.config*
-          cat $GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt $GITHUB_WORKSPACE/Config/Prax3000.txt >> .config
+          cat $GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt $GITHUB_WORKSPACE/Config/RAX3000M.txt >> .config
 
           $GITHUB_WORKSPACE/Scripts/Extras.sh
 
