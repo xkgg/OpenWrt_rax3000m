@@ -123,7 +123,8 @@ jobs:
           
           rm -rf ./tmp* ./.config*
           cp "$GITHUB_WORKSPACE/Config/RAX3000m.txt" "./owrt"
-          mv ./RAX3000m.txt ./.config
+          ls
+          mv RAX3000m.txt .config
 
           $GITHUB_WORKSPACE/Scripts/Extras.sh
 
