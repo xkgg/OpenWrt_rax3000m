@@ -122,7 +122,7 @@ jobs:
           cd ./owrt
           
           rm -rf ./tmp* ./.config*
-          cp "$GITHUB_WORKSPACE/Config/RAX3000M.txt" "./owrt"
+          cp "$GITHUB_WORKSPACE/Config/RAX3000m.txt" "./owrt"
           mv ./RAX3000M.txt ./.config
 
           $GITHUB_WORKSPACE/Scripts/Extras.sh
