@@ -32,7 +32,7 @@ env:
   OWRT_URL: ${{inputs.OWRT_URL}}
   OWRT_PW: ${{inputs.OWRT_PW}}
   OWRT_IP: ${{inputs.OWRT_IP}}
-  REPO_BRANCH: 2410
+  REPO_BRANCH: openwrt-24.10-6.6
 
 jobs:
   owrt_core:
