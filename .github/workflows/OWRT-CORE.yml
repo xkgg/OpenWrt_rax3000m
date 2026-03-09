@@ -3,7 +3,7 @@ name: OWRT-CORE
 
 on:
   #公用核心标识
-  workflow_call:
+  #workflow_call:
     inputs:
       OWRT_TARGET:
         required: true
