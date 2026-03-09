@@ -134,20 +134,24 @@ jobs:
       - name: Cleanup Toolchain
         run: |
           cd ./owrt
-
           make dirclean
-
+          
+      - name: Force Clean Rust Build
+        run: |
+        
+          echo "清理旧的 Rust 构建文件..."
+          cd ./owrt
+          rm -rf build_dir/host/rustc-1.90.0-src
+          rm -rf staging_dir/host/lib/rust
+          
       - name: Download Packages
         run: |
           cd ./owrt
-
           make download -j$(nproc)
 
       - name: Compile Firmware
         run: |
           cd ./owrt
-
-
           make -j $(($(nproc)+1)) || make -j$(nproc) V=s || make -j1 V=s
           echo "======================="
           df -h
