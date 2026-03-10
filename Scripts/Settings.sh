@@ -27,6 +27,4 @@ if [[ $OWRT_URL == *"lede"* ]] ; then
   sed -i 's/os.date()/os.date("%Y-%m-%d %H:%M:%S %A")/g' $(find ./package/*/autocore/files/ -type f -name "index.htm")
 fi
 
-#8. 修复rust报错
-MAKEFILE_PATH="openwrt/feeds/packages/lang/rust/Makefile"
-sed -i 's|	--set=llvm.download-ci-llvm=true |	--set=llvm.download-ci-llvm=false |g' "$MAKEFILE_PATH"
+
