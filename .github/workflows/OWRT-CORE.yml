@@ -1,7 +1,6 @@
 #云编译公用核心
 name: OWRT-CORE
 
-on:
   #公用核心标识
   workflow_call:
     inputs:
@@ -66,7 +65,7 @@ jobs:
         run: |
           export OWRT_DATE=$(TZ=UTC-8 date +"%Y.%m.%d_%H.%M.%S")
           export OWRT_SOURCE=$(echo $OWRT_URL | cut -d '/' -f 5-)
-          export OWRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Config/Prax3000.txt)
+          export OWRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Config/RAX3000m.txt)
 
           echo "OWRT_SOURCE=$OWRT_SOURCE" >> $GITHUB_ENV
           echo "OWRT_TARGET=$OWRT_TARGET" >> $GITHUB_ENV
