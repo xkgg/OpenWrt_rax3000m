@@ -16,3 +16,4 @@
 | <img src="https://avatars.githubusercontent.com/Kylinink?s=40" width="40" height="40" style="border-radius:50%"/> | **Kylinink** | [@Kylinink](https://github.com/Kylinink) | 2025-03-03 |
 | <img src="https://avatars.githubusercontent.com/youaokok?s=40" width="40" height="40" style="border-radius:50%"/> | **youaokok** | [@youaokok](https://github.com/youaokok) | 2025-07-15 |
 | <img src="https://avatars.githubusercontent.com/AiPaozao?s=40" width="40" height="40" style="border-radius:50%"/> | **AiPaozao** | [@AiPaozao](https://github.com/AiPaozao) | 2026-05-27 |
+| <img src="https://avatars.githubusercontent.com/xkgg?s=40" width="40" height="40" style="border-radius:50%"/> | **xkgg** | [@xkgg](https://github.com/xkgg) | 2026-10-01 |
