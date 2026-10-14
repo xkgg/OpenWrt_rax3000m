@@ -1,31 +1,223 @@
-#CI项目名
 name: CMCC-RAX3000M-Lede
 
 on:
-  #自动编译：每天早上4点
   schedule:
-    - cron: 0 20 * * *
-  #手动编译
+    # UTC 20:00 = Asia/Shanghai 04:00 the next day.
+    - cron: '0 20 * * *'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish firmware to GitHub Releases
+        type: boolean
+        default: true
 
-#CI权限
-permissions: write-all
+permissions:
+  contents: read
 
-#CI任务
+concurrency:
+  group: rax3000m-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OWRT_TARGET: RAX3000m
+  OWRT_THEME: bootstrap
+  OWRT_NAME: CMCC-RAX3000m
+  OWRT_IP: 192.168.10.1
+  OWRT_URL: https://github.com/padavanonly/immortalwrt-mt798x-6.6.git
+  REPO_BRANCH: openwrt-24.10-6.6
+  TZ: Asia/Shanghai
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  owrt_config:
-    #调用公用编译核心OWRT-CORE.yml
-    uses: ./.github/workflows/OWRT-CORE.yml
-    with:
-      #编译，RAX3000M通用配置
-      OWRT_TARGET: RAX3000m
-      #默认主题
-      OWRT_THEME: bootstrap
-      #默认主机名
-      OWRT_NAME: CMCC-RAX3000m
-      #默认密码，仅作展示，更改无效
-      OWRT_PW: password
-      #默认地址
-      OWRT_IP: 192.168.10.1
-      #默认源码
-      OWRT_URL: https://github.com/padavanonly/immortalwrt-mt798x-6.6.git
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare build environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+          docker image prune --all --force
+          sudo apt-get update -qq
+          mapfile -t dependencies < <(sed -n '3{s/\r$//;p;}' Depends.txt | tr ' ' '\n' | sed '/^$/d')
+          test "${#dependencies[@]}" -gt 0
+          sudo apt-get install -y --no-install-recommends "${dependencies[@]}"
+          sudo apt-get clean
+          df -h
+
+      - name: Prepare scripts and metadata
+        run: |
+          set -euo pipefail
+          test -s "Config/$OWRT_TARGET.txt"
+          dos2unix Scripts/*.sh
+          chmod +x Scripts/*.sh
+          source_name="${OWRT_URL##*/}"
+          source_name="${source_name%.git}"
+          devices=$(sed -nE 's/^CONFIG_TARGET_[^=]+_DEVICE_([^=]+)=y$/\1/p' "Config/$OWRT_TARGET.txt" | paste -sd ' ' -)
+          if [[ -z "$devices" ]]; then
+            devices=$(sed -n 's/^CONFIG_TARGET_PROFILE="\(.*\)"$/\1/p' "Config/$OWRT_TARGET.txt")
+          fi
+          echo "OWRT_SOURCE=$source_name" >> "$GITHUB_ENV"
+          echo "OWRT_TYPE=${devices:-mediatek/filogic (see profiles.json)}" >> "$GITHUB_ENV"
+          echo "OWRT_DATE=$(date +'%Y.%m.%d_%H.%M.%S')_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+
+      - name: Clone firmware source
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --single-branch --branch "$REPO_BRANCH" "$OWRT_URL" owrt
+          echo "OWRT_COMMIT=$(git -C owrt rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo 'src-git smpackage https://github.com/kenzok8/small' >> owrt/feeds.conf.default
+
+      - name: Restore downloaded sources
+        uses: actions/cache@v4
+        with:
+          path: owrt/dl
+          key: rax3000m-dl-${{ runner.os }}-${{ hashFiles('Config/RAX3000m.txt', 'Scripts/*.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            rax3000m-dl-${{ runner.os }}-${{ hashFiles('Config/RAX3000m.txt', 'Scripts/*.sh') }}-
+            rax3000m-dl-${{ runner.os }}-
+
+      - name: Update feeds and apply custom settings
+        working-directory: owrt
+        run: |
+          set -euo pipefail
+          ./scripts/feeds update -a
+          # Remove conflicting packages before creating installation links.
+          bash -e "$GITHUB_WORKSPACE/Scripts/Settings.sh"
+          ./scripts/feeds install -a
+          (
+            cd package
+            bash -e "$GITHUB_WORKSPACE/Scripts/Plugins.sh"
+          )
+          cp "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt" .config
+          bash -e "$GITHUB_WORKSPACE/Scripts/Extras.sh"
+          rust_makefile=feeds/packages/lang/rust/Makefile
+          if [[ -f "$rust_makefile" ]]; then
+            sed -i 's/llvm.download-ci-llvm=true/llvm.download-ci-llvm=false/g' "$rust_makefile"
+          fi
+          make defconfig
+          mkdir -p logs
+          cp .config logs/build.config
+          {
+            echo "source=$OWRT_URL"
+            echo "branch=$REPO_BRANCH"
+            echo "commit=$OWRT_COMMIT"
+            git -C "$GITHUB_WORKSPACE" rev-parse HEAD
+            ./scripts/feeds list -s
+          } > logs/source-info.txt
+
+      - name: Download packages
+        working-directory: owrt
+        run: |
+          set -euo pipefail
+          if ! make download -j8 2>&1 | tee logs/download.log; then
+            make download -j1 V=s 2>&1 | tee logs/download-retry.log
+          fi
+
+      - name: Compile firmware
+        working-directory: owrt
+        run: |
+          set -euo pipefail
+          if ! make -j"$(nproc)" 2>&1 | tee logs/build.log; then
+            make -j1 V=s 2>&1 | tee logs/build-retry.log
+          fi
+          df -h
+
+      - name: Package firmware
+        working-directory: owrt
+        run: |
+          set -euo pipefail
+          mkdir -p upload
+          # Preserve metadata and exclude package repositories.
+          while IFS= read -r -d '' file; do
+            dest="upload/$(basename "$file")"
+            if [[ -e "$dest" ]]; then
+              echo "::error::Duplicate firmware filename: $dest"
+              exit 1
+            fi
+            cp "$file" "$dest"
+          done < <(find bin/targets -type d -name packages -prune -o -type f -print0)
+          firmware=$(find upload -maxdepth 1 -type f \( -name '*.bin' -o -name '*.itb' -o -name '*.img' -o -name '*.img.gz' \) -print -quit)
+          test -n "$firmware"
+          cp .config "upload/Config_${OWRT_TARGET}_${OWRT_SOURCE}_${OWRT_DATE}.txt"
+          cp logs/source-info.txt upload/source-info.txt
+          cd upload
+          rm -f sha256sums
+          find . -maxdepth 1 -type f ! -name sha256sums -print0 \
+            | sort -z | xargs -0 sha256sum > sha256sums
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ env.OWRT_TARGET }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: owrt/upload/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Publish firmware
+        if: github.event_name == 'schedule' || inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.OWRT_TARGET }}_${{ env.OWRT_SOURCE }}_${{ env.OWRT_DATE }}
+          target_commitish: ${{ github.sha }}
+          name: RAX3000M ${{ env.OWRT_DATE }}
+          files: owrt/upload/*
+          fail_on_unmatched_files: true
+          body: |
+            本固件包可能包含多个设备，请按设备型号和闪存类型选择对应固件。
+            源码：${{ env.OWRT_URL }}
+            分支：${{ env.REPO_BRANCH }}
+            源码提交：${{ env.OWRT_COMMIT }}
+            平台：${{ env.OWRT_TARGET }}
+            设备：${{ env.OWRT_TYPE }}
+            管理地址：${{ env.OWRT_IP }}
+            主机名：${{ env.OWRT_NAME }}
+            登录密码沿用上游源码默认设置，本流程不修改密码。
+            下载后请使用 sha256sums 校验文件。
+
+      - name: Keep six releases for this firmware only
+        if: github.event_name == 'schedule' || inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          prefix="${OWRT_TARGET}_${OWRT_SOURCE}_"
+          legacy_prefix="${OWRT_TARGET}_${OWRT_SOURCE}.git_"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | [.created_at, .tag_name] | @tsv' \
+            | sort -r > "$RUNNER_TEMP/rax3000m-releases.tsv"
+          count=0
+          while IFS=$'\t' read -r created tag; do
+            if [[ "$tag" != "$prefix"* && "$tag" != "$legacy_prefix"* ]]; then
+              continue
+            fi
+            count=$((count + 1))
+            if (( count > 6 )); then
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            fi
+          done < "$RUNNER_TEMP/rax3000m-releases.tsv"
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            owrt/logs/
+            owrt/.config
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
