@@ -33,13 +33,13 @@ defaults:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 350
     permissions:
       contents: write
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -51,9 +51,21 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           docker image prune --all --force
           sudo apt-get update -qq
-          mapfile -t dependencies < <(sed -n '3{s/\r$//;p;}' Depends.txt | tr ' ' '\n' | sed '/^$/d')
+          # Translate legacy package names for Ubuntu 24.04.
+          mapfile -t dependencies < <(
+            sed -n '3{s/\r$//;p;}' Depends.txt | tr ' ' '\n' |
+              sed -e '/^$/d' \
+                  -e 's/^libncurses5-dev$/libncurses-dev/' \
+                  -e 's/^libncursesw5$/libncurses-dev/' \
+                  -e 's/^libncursesw5-dev$/libncurses-dev/' \
+                  -e 's/^gnutls-dev$/libgnutls28-dev/' \
+                  -e 's/^libz-dev$/zlib1g-dev/' \
+                  -e 's/^mkisofs$/genisoimage/' |
+              sort -u
+          )
           test "${#dependencies[@]}" -gt 0
-          sudo apt-get install -y --no-install-recommends "${dependencies[@]}"
+          sudo apt-get install -y --no-install-recommends "${dependencies[@]}" \
+            clang lld llvm zstd file xz-utils python3-setuptools
           sudo apt-get clean
           df -h
 
@@ -81,7 +93,10 @@ jobs:
           echo 'src-git smpackage https://github.com/kenzok8/small' >> owrt/feeds.conf.default
 
       - name: Restore downloaded sources
-        uses: actions/cache@v4
+        id: downloads-cache
+        uses: actions/cache/restore@v6.1.0
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
         with:
           path: owrt/dl
           key: rax3000m-dl-${{ runner.os }}-${{ hashFiles('Config/RAX3000m.txt', 'Scripts/*.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -126,6 +141,14 @@ jobs:
             make download -j1 V=s 2>&1 | tee logs/download-retry.log
           fi
 
+      - name: Save downloaded sources
+        if: steps.downloads-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: owrt/dl
+          key: ${{ steps.downloads-cache.outputs.cache-primary-key }}
+
       - name: Compile firmware
         working-directory: owrt
         run: |
@@ -159,7 +182,7 @@ jobs:
             | sort -z | xargs -0 sha256sum > sha256sums
 
       - name: Upload firmware artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: firmware-${{ env.OWRT_TARGET }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: owrt/upload/
@@ -169,7 +192,7 @@ jobs:
 
       - name: Publish firmware
         if: github.event_name == 'schedule' || inputs.publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           tag_name: ${{ env.OWRT_TARGET }}_${{ env.OWRT_SOURCE }}_${{ env.OWRT_DATE }}
           target_commitish: ${{ github.sha }}
@@ -196,11 +219,14 @@ jobs:
           set -euo pipefail
           prefix="${OWRT_TARGET}_${OWRT_SOURCE}_"
           legacy_prefix="${OWRT_TARGET}_${OWRT_SOURCE}.git_"
-          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            --jq '.[] | select(.draft == false and .prerelease == false) | [.created_at, .tag_name] | @tsv' \
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | [.published_at, .tag_name] | @tsv' \
             | sort -r > "$RUNNER_TEMP/rax3000m-releases.tsv"
           count=0
-          while IFS=$'\t' read -r created tag; do
+          while IFS=$'\t' read -r published tag; do
             if [[ "$tag" != "$prefix"* && "$tag" != "$legacy_prefix"* ]]; then
               continue
             fi
@@ -212,7 +238,7 @@ jobs:
 
       - name: Upload build logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: build-logs-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
