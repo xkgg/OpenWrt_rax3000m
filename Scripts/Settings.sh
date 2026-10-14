@@ -5,6 +5,10 @@ find ./feeds/luci/ -type d \( -name '*design*' -o -name '*openclash*' \) -prune 
 #删除冲突argon插件附属inas
 
 rm -rf feeds/smpackage/{base-files,dnsmasq,firewall*,fullconenat,libnftnl,nftables,ppp,opkg,ucl,upx,vsftpd-alt,miniupnpd-iptables,wireless-regdb}
+#CMCC-RAX3000M: 删除原仓库旧版frp(0.51.3)，改用kenzok8/small-package新版(由Plugins.sh添加)
+if [[ $OWRT_TARGET == "RAX3000m" ]]; then
+  rm -rf feeds/packages/net/frp
+fi
 #修改默认主题
 #sed -i "s/luci-theme-bootstrap/luci-theme-$OWRT_THEME/g" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 #修改默认IP地址

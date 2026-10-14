@@ -21,6 +21,13 @@ git clone --depth=1 --single-branch --branch "dev" https://github.com/vernesong/
 #Pass Wall
 git clone --depth=1 --single-branch --branch "main" https://github.com/xiaorouji/openwrt-passwall.git ./pw_luci
 git clone --depth=1 --single-branch --branch "main" https://github.com/xiaorouji/openwrt-passwall-packages.git ./pw_packages
+#FRP (kenzok8/small-package新版0.70.1，替换原仓库旧版；仅CMCC-RAX3000M)
+if [[ $OWRT_TARGET == "RAX3000m" ]]; then
+  git clone --depth=1 --filter=blob:none --sparse https://github.com/kenzok8/small-package.git ./spkg-frp
+  git -C ./spkg-frp sparse-checkout set frp
+  cp -r ./spkg-frp/frp ./frp
+  rm -rf ./spkg-frp
+fi
 
 #预置OpenClash内核和GEO数据
 export CORE_smart=https://raw.githubusercontent.com/vernesong/OpenClash/core/dev/smart/clash-linux
