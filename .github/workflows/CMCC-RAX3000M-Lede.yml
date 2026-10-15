@@ -112,6 +112,7 @@ jobs:
           ./scripts/feeds update -a 2>&1 | tee logs/feeds-update.log
           # Remove conflicting packages before creating installation links.
           bash -e "$GITHUB_WORKSPACE/Scripts/Settings.sh" 2>&1 | tee logs/settings.log
+          ./scripts/feeds update -i -a 2>&1 | tee logs/feeds-index.log
           ./scripts/feeds install -a 2>&1 | tee logs/feeds-install.log
           (
             cd package
@@ -124,6 +125,11 @@ jobs:
             sed -i 's/llvm.download-ci-llvm=true/llvm.download-ci-llvm=false/g' "$rust_makefile"
           fi
           make defconfig 2>&1 | tee logs/defconfig.log
+          # Some Kconfig errors do not propagate through make defconfig.
+          if grep -qE '(^|[[:space:]])error:|recursive dependency detected' logs/defconfig.log; then
+            echo "::error::Invalid package configuration; see logs/defconfig.log"
+            exit 1
+          fi
           cp .config logs/build.config
           {
             echo "source=$OWRT_URL"
@@ -131,6 +137,10 @@ jobs:
             echo "commit=$OWRT_COMMIT"
             git -C "$GITHUB_WORKSPACE" rev-parse HEAD
             ./scripts/feeds list -s
+            echo "golang_source=https://github.com/kenzok8/golang.git"
+            echo "golang_branch=1.26"
+            echo "golang_commit=$(git -C feeds/packages/lang/golang rev-parse HEAD)"
+            sed -n '/^GO_VERSION_/p' feeds/packages/lang/golang/golang/Makefile
           } > logs/source-info.txt
 
       - name: Download packages

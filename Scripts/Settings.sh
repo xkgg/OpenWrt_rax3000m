@@ -7,7 +7,16 @@ find ./feeds/luci/ -type d \( -name '*design*' -o -name '*openclash*' \) -prune 
 rm -rf feeds/smpackage/{base-files,dnsmasq,firewall*,fullconenat,libnftnl,nftables,ppp,opkg,ucl,upx,vsftpd-alt,miniupnpd-iptables,wireless-regdb}
 #CMCC-RAX3000M: 删除原仓库旧版frp(0.51.3)，改用kenzok8/small-package新版(由Plugins.sh添加)
 if [[ $OWRT_TARGET == "RAX3000m" ]]; then
+  # Keep mihomo as a single provider to avoid a luci-app-fchomo Kconfig cycle.
+  if [[ -f feeds/smpackage/clashoo/Makefile ]]; then
+    sed -i -E 's/^([[:space:]]*PROVIDES:=)mihomo([[:space:]]|$)/\1\2/' feeds/smpackage/clashoo/Makefile
+  fi
   rm -rf feeds/packages/net/frp
+  # FRP 0.70.1 requires Go >= 1.25; replace the complete OpenWrt Go package.
+  rm -rf feeds/packages/lang/golang
+  git clone --depth=1 --single-branch --branch 1.26 \
+    https://github.com/kenzok8/golang.git feeds/packages/lang/golang
+  test -s feeds/packages/lang/golang/golang/Makefile
 fi
 #修改默认主题
 #sed -i "s/luci-theme-bootstrap/luci-theme-$OWRT_THEME/g" $(find ./feeds/luci/collections/ -type f -name "Makefile")
