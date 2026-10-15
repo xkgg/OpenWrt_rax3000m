@@ -16,8 +16,8 @@ download() {
 #Open Clash
 git clone --depth=1 --single-branch --branch "dev" https://github.com/vernesong/OpenClash.git
 #Pass Wall
-git clone --depth=1 --single-branch --branch "main" https://github.com/xiaorouji/openwrt-passwall.git ./pw_luci
-git clone --depth=1 --single-branch --branch "main" https://github.com/xiaorouji/openwrt-passwall-packages.git ./pw_packages
+git clone --depth=1 --single-branch --branch "main" https://github.com/Openwrt-Passwall/openwrt-passwall.git ./pw_luci
+git clone --depth=1 --single-branch --branch "main" https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git ./pw_packages
 #FRP (kenzok8/small-package新版0.70.1，替换原仓库旧版；仅CMCC-RAX3000M)
 if [[ $OWRT_TARGET == "RAX3000m" ]]; then
   git clone --depth=1 --filter=blob:none --sparse https://github.com/kenzok8/small-package.git ./spkg-frp

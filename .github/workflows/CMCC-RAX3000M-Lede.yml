@@ -108,22 +108,22 @@ jobs:
         working-directory: owrt
         run: |
           set -euo pipefail
-          ./scripts/feeds update -a
+          mkdir -p logs
+          ./scripts/feeds update -a 2>&1 | tee logs/feeds-update.log
           # Remove conflicting packages before creating installation links.
-          bash -e "$GITHUB_WORKSPACE/Scripts/Settings.sh"
-          ./scripts/feeds install -a
+          bash -e "$GITHUB_WORKSPACE/Scripts/Settings.sh" 2>&1 | tee logs/settings.log
+          ./scripts/feeds install -a 2>&1 | tee logs/feeds-install.log
           (
             cd package
             bash -e "$GITHUB_WORKSPACE/Scripts/Plugins.sh"
-          )
+          ) 2>&1 | tee logs/plugins.log
           cp "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt" .config
           bash -e "$GITHUB_WORKSPACE/Scripts/Extras.sh"
           rust_makefile=feeds/packages/lang/rust/Makefile
           if [[ -f "$rust_makefile" ]]; then
             sed -i 's/llvm.download-ci-llvm=true/llvm.download-ci-llvm=false/g' "$rust_makefile"
           fi
-          make defconfig
-          mkdir -p logs
+          make defconfig 2>&1 | tee logs/defconfig.log
           cp .config logs/build.config
           {
             echo "source=$OWRT_URL"
