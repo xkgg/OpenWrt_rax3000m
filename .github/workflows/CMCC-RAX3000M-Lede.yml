@@ -201,12 +201,15 @@ jobs:
           compression-level: 0
 
       - name: Publish firmware
-        if: github.event_name == 'schedule' || inputs.publish
+        if: success() && (github.event_name == 'schedule' || inputs.publish)
         uses: softprops/action-gh-release@v3.0.3
         with:
           tag_name: ${{ env.OWRT_TARGET }}_${{ env.OWRT_SOURCE }}_${{ env.OWRT_DATE }}
           target_commitish: ${{ github.sha }}
           name: RAX3000M ${{ env.OWRT_DATE }}
+          draft: false
+          prerelease: false
+          make_latest: "true"
           files: owrt/upload/*
           fail_on_unmatched_files: true
           body: |

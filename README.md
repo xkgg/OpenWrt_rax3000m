@@ -1,13 +1,14 @@
 # OpenWrt CMCC-RAX3000M 固件
 
-跟随闭源主线更新。CMCC-RAX3000M极致版，更新频率：跟随源码更新而更新。
+跟随闭源主线更新。CMCC-RAX3000M极致版，每天自动构建并发布固件。
 - 插件源码默认：kenzok8大神的
 
 ## RAX3000M 编译流程
 
 编译入口为 `.github/workflows/CMCC-RAX3000M-Lede.yml`，已合并原
-`OWRT-CORE.yml`。每天北京时间 04:00 自动编译，也可在 Actions 中手动运行。
-手动运行时关闭 `publish` 可只生成构建产物，不发布 Release。
+`OWRT-CORE.yml`。每天北京时间 04:00（UTC 20:00）从 `main` 自动编译，
+成功后自动发布正式 Release 并标记为 Latest。GitHub 定时任务可能延迟启动。
+也可在 Actions 中手动运行，默认发布 Release；关闭 `publish` 可只生成构建产物。
 
 - 源码：`padavanonly/immortalwrt-mt798x-6.6`，分支 `openwrt-24.10-6.6`。
 - 配置：`Config/RAX3000m.txt`，当前选择 `cmcc_rax3000m-emmc-mtk`。
