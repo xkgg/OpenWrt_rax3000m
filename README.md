@@ -36,3 +36,4 @@
 | <img src="https://avatars.githubusercontent.com/youaokok?s=40" width="40" height="40" style="border-radius:50%"/> | **youaokok** | [@youaokok](https://github.com/youaokok) | 2025-07-15 |
 | <img src="https://avatars.githubusercontent.com/AiPaozao?s=40" width="40" height="40" style="border-radius:50%"/> | **AiPaozao** | [@AiPaozao](https://github.com/AiPaozao) | 2026-05-27 |
 | <img src="https://avatars.githubusercontent.com/xkgg?s=40" width="40" height="40" style="border-radius:50%"/> | **xkgg** | [@xkgg](https://github.com/xkgg) | 2026-10-01 |
+| <img src="https://avatars.githubusercontent.com/wii-me?s=40" width="40" height="40" style="border-radius:50%"/> | **wii-me** | [@wii-me](https://github.com/wii-me) | 2026-10-26 |
