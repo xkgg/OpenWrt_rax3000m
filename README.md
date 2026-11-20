@@ -38,3 +38,4 @@
 | <img src="https://avatars.githubusercontent.com/xkgg?s=40" width="40" height="40" style="border-radius:50%"/> | **xkgg** | [@xkgg](https://github.com/xkgg) | 2026-10-01 |
 | <img src="https://avatars.githubusercontent.com/wii-me?s=40" width="40" height="40" style="border-radius:50%"/> | **wii-me** | [@wii-me](https://github.com/wii-me) | 2026-10-26 |
 | <img src="https://avatars.githubusercontent.com/Gang945?s=40" width="40" height="40" style="border-radius:50%"/> | **Gang945** | [@Gang945](https://github.com/Gang945) | 2026-11-19 |
+| <img src="https://avatars.githubusercontent.com/cschengliang?s=40" width="40" height="40" style="border-radius:50%"/> | **cschengliang** | [@cschengliang](https://github.com/cschengliang) | 2026-11-20 |
