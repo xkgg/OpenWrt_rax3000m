@@ -12,7 +12,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 concurrency:
@@ -206,6 +206,7 @@ jobs:
         if: success() && (github.event_name == 'schedule' || inputs.publish)
         uses: softprops/action-gh-release@v3.0.4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.OWRT_TARGET }}_${{ env.OWRT_SOURCE }}_${{ env.OWRT_DATE }}
           target_commitish: ${{ github.sha }}
           name: RAX3000M ${{ env.OWRT_DATE }}
