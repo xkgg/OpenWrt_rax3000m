@@ -26,6 +26,10 @@ on:
       OWRT_IP:
         required: true
         type: string
+      REPO_BRANCH:
+        required: false
+        type: string
+        default: 'openwrt-24.10'
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -35,13 +39,15 @@ env:
   OWRT_URL: ${{inputs.OWRT_URL}}
   OWRT_PW: ${{inputs.OWRT_PW}}
   OWRT_IP: ${{inputs.OWRT_IP}}
+  REPO_BRANCH: ${{inputs.REPO_BRANCH || 'openwrt-24.10'}}
 
 jobs:
   owrt_core:
     runs-on: ubuntu-22.04
+    permissions: write-all
     steps:
       - name: Checkout Projects
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: 初始化环境
         env:
@@ -66,9 +72,13 @@ jobs:
 
       - name: 初始化值
         run: |
-          export OWRT_DATE=$(TZ=UTC-8 date +"%Y.%m.%d_%H.%M.%S")
+          export OWRT_DATE=$(TZ="Asia/Shanghai" date +"%Y.%m.%d_%H.%M.%S")
           export OWRT_SOURCE=$(echo $OWRT_URL | cut -d '/' -f 5-)
-          export OWRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Config/redmiax6000.txt)
+          if [[ -f "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt" ]]; then
+            export OWRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt")
+          else
+            export OWRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" "$GITHUB_WORKSPACE/Config/redmiax6000.txt")
+          fi
 
           echo "OWRT_SOURCE=$OWRT_SOURCE" >> $GITHUB_ENV
           echo "OWRT_TARGET=$OWRT_TARGET" >> $GITHUB_ENV
@@ -86,7 +96,7 @@ jobs:
 
       - name: Clone OWRT Code
         run: |
-          git clone $OWRT_URL ./owrt
+          git clone --depth 1 -b "$REPO_BRANCH" "$OWRT_URL" ./owrt
           
       - name: Load custom feeds
         run: |
@@ -115,7 +125,12 @@ jobs:
           cd ./owrt
 
           rm -rf ./tmp* ./.config*
-          cat $GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt $GITHUB_WORKSPACE/Config/redmiax6000.txt >> .config
+          if [[ -f "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt" ]]; then
+            cat "$GITHUB_WORKSPACE/Config/$OWRT_TARGET.txt" >> .config
+          fi
+          if [[ -f "$GITHUB_WORKSPACE/Config/redmiax6000.txt" && "$OWRT_TARGET" != "redmiax6000" ]]; then
+            cat "$GITHUB_WORKSPACE/Config/redmiax6000.txt" >> .config
+          fi
 
           $GITHUB_WORKSPACE/Scripts/Extras.sh
 
@@ -158,7 +173,7 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Renames.sh
 
       - name: Release Firmware
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v3.0.4
         with:
           tag_name: ${{env.OWRT_TARGET}}_${{env.OWRT_SOURCE}}_${{env.OWRT_DATE}}
           files: ./owrt/upload/*.*
@@ -168,19 +183,23 @@ jobs:
             不要问，更就完事了！
 
             源码：${{env.OWRT_SOURCE}}
+            分支：${{env.REPO_BRANCH}}
             平台：${{env.OWRT_TARGET}}
             设备：${{env.OWRT_TYPE}}
             密码：${{env.OWRT_PW}}
             地址：${{env.OWRT_IP}}
 
       - name: Delete Old Releases
-        uses: dev-drprasad/delete-older-releases@master
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          keep_latest: 6
+          keep_latest: 3
           delete_tags: true
 
       - name: Delete Old Workflows
-        uses: Mattraks/delete-workflow-runs@main
+        uses: Mattraks/delete-workflow-runs@v2
         with:
-          retain_days: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          retain_days: 3
           keep_minimum_runs: 1

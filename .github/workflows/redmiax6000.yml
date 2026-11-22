@@ -43,3 +43,5 @@ jobs:
       OWRT_IP: 192.168.31.1
       #默认源码
       OWRT_URL: https://github.com/hanwckf/immortalwrt-mt798x.git
+      #源码分支
+      REPO_BRANCH: ${{ inputs.REPO_BRANCH || 'openwrt-24.10' }}
