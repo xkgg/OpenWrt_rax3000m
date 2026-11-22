@@ -9,17 +9,15 @@ on:
   workflow_dispatch:
     inputs:
       REPO_BRANCH:
-        description: '天灵源码-请选择分支'
+        description: '请选择源码分支'
         required: true
-        default: 'openwrt-24.10'
+        default: 'openwrt-24.10-6.6'
         type: choice
         options:
-          - 'openwrt-24.10'
+          - 'openwrt-24.10-6.6'
           - 'openwrt-23.05'
-          - 'openwrt-22.03'
           - 'openwrt-21.02'
           - 'master'
-          - 'mt798x'
 
 # CI权限
 permissions: write-all
@@ -35,8 +33,8 @@ env:
   OWRT_wifi_ssid: Redmi_5A21
   OWRT_PW: password
   OWRT_IP: 192.168.31.1
-  OWRT_URL: https://github.com/hanwckf/immortalwrt-mt798x.git
-  REPO_BRANCH: ${{ inputs.REPO_BRANCH || 'openwrt-24.10' }}
+  OWRT_URL: https://github.com/padavanonly/immortalwrt-mt798x-6.6.git
+  REPO_BRANCH: ${{ inputs.REPO_BRANCH || 'openwrt-24.10-6.6' }}
 
 jobs:
   build:
