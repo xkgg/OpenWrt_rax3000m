@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: rax3000m-${{ github.ref }}
@@ -37,6 +38,7 @@ jobs:
     timeout-minutes: 350
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout project
         uses: actions/checkout@v7.0.1
@@ -83,7 +85,7 @@ jobs:
           fi
           echo "OWRT_SOURCE=$source_name" >> "$GITHUB_ENV"
           echo "OWRT_TYPE=${devices:-mediatek/filogic (see profiles.json)}" >> "$GITHUB_ENV"
-          echo "OWRT_DATE=$(date +'%Y.%m.%d_%H.%M.%S')_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "OWRT_DATE=$(date +'%Y.%m.%d_%H.%M.%S')" >> "$GITHUB_ENV"
 
       - name: Clone firmware source
         run: |
@@ -224,12 +226,13 @@ jobs:
             登录密码沿用上游源码默认设置，本流程不修改密码。
             下载后请使用 sha256sums 校验文件。
 
-      - name: Keep six releases for this firmware only
+      - name: Cleanup old releases (keep 3 days)
         if: github.event_name == 'schedule' || inputs.publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          cutoff=$(date -u -d '3 days ago' +%s)
           prefix="${OWRT_TARGET}_${OWRT_SOURCE}_"
           legacy_prefix="${OWRT_TARGET}_${OWRT_SOURCE}.git_"
           gh api --paginate \
@@ -240,14 +243,44 @@ jobs:
             | sort -r > "$RUNNER_TEMP/rax3000m-releases.tsv"
           count=0
           while IFS=$'\t' read -r published tag; do
+            [[ -z "$tag" ]] && continue
             if [[ "$tag" != "$prefix"* && "$tag" != "$legacy_prefix"* ]]; then
               continue
             fi
             count=$((count + 1))
-            if (( count > 6 )); then
+            published_ts=$(date -u -d "$published" +%s)
+            if (( count > 1 && published_ts < cutoff )); then
+              echo "Deleting old release: $tag (published at $published)"
               gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
             fi
           done < "$RUNNER_TEMP/rax3000m-releases.tsv"
+
+      - name: Cleanup old workflow runs (keep 3 days)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d '3 days ago' +%s)
+          workflow_file="CMCC-RAX3000M-Lede.yml"
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow_file/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "completed") | [.created_at, .id] | @tsv' \
+            | sort -r > "$RUNNER_TEMP/rax3000m-runs.tsv" || true
+          if [[ -s "$RUNNER_TEMP/rax3000m-runs.tsv" ]]; then
+            count=0
+            while IFS=$'\t' read -r created_at run_id; do
+              [[ -z "$run_id" ]] && continue
+              count=$((count + 1))
+              created_ts=$(date -u -d "$created_at" +%s)
+              if (( count > 1 && created_ts < cutoff )); then
+                echo "Deleting old workflow run: $run_id (created at $created_at)"
+                gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" >/dev/null 2>&1 || true
+              fi
+            done < "$RUNNER_TEMP/rax3000m-runs.tsv"
+          fi
 
       - name: Upload build logs
         if: always()
