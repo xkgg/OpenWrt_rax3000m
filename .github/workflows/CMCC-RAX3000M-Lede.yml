@@ -204,7 +204,7 @@ jobs:
 
       - name: Publish firmware
         if: success() && (github.event_name == 'schedule' || inputs.publish)
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v3.0.4
         with:
           tag_name: ${{ env.OWRT_TARGET }}_${{ env.OWRT_SOURCE }}_${{ env.OWRT_DATE }}
           target_commitish: ${{ github.sha }}
