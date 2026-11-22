@@ -1,4 +1,4 @@
-name: Stargazers Tracker
+name: 记录点赞支持者 (Stargazers Tracker)
 
 on:
   watch:
@@ -12,16 +12,16 @@ jobs:
   track-stargazer:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: 检出仓库代码
         uses: actions/checkout@v4
 
-      - name: Update Stargazers in README
+      - name: 更新 README 中的点赞支持者
         run: |
           ACTOR="${{ github.event.sender.login }}"
           URL="${{ github.event.sender.html_url }}"
           DATE="$(date +'%Y-%m-%d')"
 
-          echo "🌟 New Star by: ${ACTOR} (${URL})"
+          echo "🌟 收到新的 Star: ${ACTOR} (${URL})"
 
           if [ -n "${ACTOR}" ] && ! grep -q "@${ACTOR}" README.md; then
             echo "| <img src=\"https://avatars.githubusercontent.com/${ACTOR}?s=40\" width=\"40\" height=\"40\" style=\"border-radius:50%\"/> | **${ACTOR}** | [@${ACTOR}](${URL}) | ${DATE} |" >> README.md
@@ -29,9 +29,9 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add README.md
-            git commit -m "chore: record new stargazer @${ACTOR}"
+            git commit -m "chore: 记录新的点赞支持者 @${ACTOR}"
             git push origin main
-            echo "✅ README updated with new stargazer @${ACTOR}"
+            echo "✅ README 已成功更新点赞支持者 @${ACTOR}"
           else
-            echo "ℹ️ User already recorded or actor empty"
+            echo "ℹ️ 用户已存在或点赞者为空，无需更新"
           fi
