@@ -154,6 +154,7 @@ jobs:
       - name: Release Firmware
         uses: softprops/action-gh-release@v3.0.4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{env.OWRT_TARGET}}_${{env.OWRT_SOURCE}}_${{env.OWRT_DATE}}
           name: REDMI-AX6000 ${{ env.OWRT_DATE }}
           files: ./owrt/upload/*.*
