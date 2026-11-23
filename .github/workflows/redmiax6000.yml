@@ -98,12 +98,13 @@ jobs:
         run: |
           cd ./owrt
           ./scripts/feeds update -a
-          ./scripts/feeds install -a
 
       - name: Custom Scripts
         run: |
           cd ./owrt
           $GITHUB_WORKSPACE/Scripts/Settings.sh
+          ./scripts/feeds update -i -a
+          ./scripts/feeds install -a
           cd ./package
           $GITHUB_WORKSPACE/Scripts/Plugins.sh
 
