@@ -5,6 +5,8 @@ find ./feeds/luci/ -type d \( -name '*design*' -o -name '*openclash*' \) -prune 
 #删除冲突argon插件附属inas
 
 rm -rf feeds/smpackage/{base-files,dnsmasq,firewall*,fullconenat,libnftnl,nftables,ppp,opkg,ucl,upx,vsftpd-alt,miniupnpd-iptables,wireless-regdb}
+# 删除引起 Kconfig 递归依赖 (recursive dependency detected) 的软件包
+rm -rf feeds/packages/net/{dnsdist,snort3,knot-resolver,openappid}
 # Keep mihomo as a single provider to avoid a luci-app-fchomo Kconfig cycle.
 if [[ -f feeds/smpackage/clashoo/Makefile ]]; then
   sed -i -E 's/^([[:space:]]*PROVIDES:=)mihomo([[:space:]]|$)/\1\2/' feeds/smpackage/clashoo/Makefile
