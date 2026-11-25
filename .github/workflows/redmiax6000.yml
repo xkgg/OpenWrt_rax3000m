@@ -134,7 +134,7 @@ jobs:
       - name: Compile Firmware
         run: |
           cd ./owrt
-          make -j $(($(nproc)+1)) || make -j$(nproc) V=s || make -j1 V=s
+          make -j $(($(nproc)+1)) BUILD_LOG=1 || make -j$(nproc) V=s BUILD_LOG=1 || make -j1 V=s BUILD_LOG=1
           echo "======================="
           df -h
           echo "======================="
@@ -185,3 +185,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           retain_days: 3
           keep_minimum_runs: 1
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Logs-${{ env.OWRT_TARGET }}-${{ env.OWRT_DATE }}
+          path: |
+            owrt/logs/
+            owrt/.config
+          retention-days: 7
+          if-no-files-found: ignore
