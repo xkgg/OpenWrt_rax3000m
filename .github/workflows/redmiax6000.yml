@@ -172,12 +172,30 @@ jobs:
             地址：${{env.OWRT_IP}}
 
       - name: Delete Old Releases
-        uses: dev-drprasad/delete-older-releases@v0.3.4
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          keep_latest: 3
-          delete_tags: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          prefix="${OWRT_TARGET}_${OWRT_SOURCE}_"
+          legacy_prefix="${OWRT_TARGET}_${OWRT_SOURCE}.git_"
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | [.published_at, .tag_name] | @tsv' \
+            | sort -r > "$RUNNER_TEMP/redmiax6000-releases.tsv"
+          count=0
+          while IFS=$'\t' read -r published tag; do
+            [[ -z "$tag" ]] && continue
+            if [[ "$tag" != "$prefix"* && "$tag" != "$legacy_prefix"* ]]; then
+              continue
+            fi
+            count=$((count + 1))
+            if (( count > 3 )); then
+              echo "Deleting old release: $tag (published at $published)"
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            fi
+          done < "$RUNNER_TEMP/redmiax6000-releases.tsv"
 
       - name: Delete Old Workflows
         uses: Mattraks/delete-workflow-runs@v2.1.0
